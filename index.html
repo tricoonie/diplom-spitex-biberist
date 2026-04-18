@@ -1,0 +1,2227 @@
+<!DOCTYPE html>
+<html lang="de-CH">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#0a1218" />
+<title>KI bei der Spitex Biberist · Interaktiv</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/davidshimjs/qrcodejs@04f46c6a0708418cb7b96fc563eacae0fbf77674/qrcode.min.js"></script>
+<style>
+  :root {
+    --bg:        #0a1218;
+    --bg-alt:    #0f1a22;
+    --surface:   #13202a;
+    --surface-2: #1a2a36;
+    --surface-3: #223444;
+    --line:      #253645;
+    --line-soft: #1d2b36;
+    --text:      #eaf3f7;
+    --text-dim:  #93adbd;
+    --text-mute: #5d7886;
+    --accent:    #3fb8af;
+    --accent-d:  #2a8f87;
+    --accent-2:  #7cc67a;
+    --warn:      #e6b35a;
+    --danger:    #e57676;
+
+    --font-sans: "Helvetica Neue", Helvetica, Arial, -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; padding: 0; height: 100%; overscroll-behavior: none; }
+  body {
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.005em;
+    overflow: hidden;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      linear-gradient(rgba(63,184,175,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(63,184,175,0.025) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+  body::after {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse at 85% 15%, rgba(63,184,175,0.08), transparent 50%),
+      radial-gradient(ellipse at 15% 85%, rgba(124,198,122,0.04), transparent 50%);
+  }
+
+  h1,h2,h3,h4,p { margin: 0; }
+  h1 { font-weight: 500; letter-spacing: -0.025em; }
+  h2 { font-weight: 500; letter-spacing: -0.02em; }
+  h3 { font-weight: 500; letter-spacing: -0.01em; }
+  .mono { font-family: var(--font-mono); font-feature-settings: "tnum" 1; }
+
+  /* ============== APP SHELL ============== */
+  .app {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    z-index: 1;
+  }
+
+  /* Top bar */
+  .topbar {
+    height: 56px;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--line-soft);
+    background: rgba(10,18,24,0.88);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  .tb-brand {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--text-dim);
+  }
+  .tb-brand .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px rgba(63,184,175,0.6);
+    animation: pulseb 2.4s infinite;
+  }
+  @keyframes pulseb { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+  .tb-brand strong { color: var(--text); font-weight: 500; letter-spacing: 0.04em; }
+  .tb-info {
+    font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.14em;
+    color: var(--text-mute); text-transform: uppercase;
+  }
+
+  /* ============== STAGE ============== */
+  .stage {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+  .view {
+    position: absolute; inset: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 36px 48px 100px;
+    opacity: 0;
+    transform: translateY(20px);
+    pointer-events: none;
+    transition: opacity .35s ease, transform .35s ease;
+  }
+  .view.active {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .view-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    min-height: 100%;
+    display: flex; flex-direction: column;
+    gap: 28px;
+  }
+
+  /* ============== TAB BAR ============== */
+  .tabbar {
+    height: 72px;
+    flex-shrink: 0;
+    border-top: 1px solid var(--line-soft);
+    background: rgba(15,26,34,0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 24px;
+    gap: 4px;
+    z-index: 10;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabbar::-webkit-scrollbar { display: none; }
+  .tab {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: transparent; border: 0;
+    padding: 10px 18px;
+    font-family: var(--font-mono);
+    font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--text-mute);
+    cursor: pointer;
+    transition: color .15s;
+    white-space: nowrap;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+  .tab .icon {
+    width: 32px; height: 32px;
+    display: grid; place-items: center;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: var(--surface);
+    font-family: var(--font-mono);
+    font-size: 13px; font-weight: 500;
+    color: var(--text-dim);
+    transition: all .2s;
+  }
+  .tab .lbl { font-weight: 500; }
+  .tab:hover { color: var(--text); }
+  .tab:hover .icon { border-color: var(--accent); color: var(--accent); }
+  .tab.active { color: var(--accent); }
+  .tab.active .icon {
+    border-color: var(--accent); background: var(--accent); color: var(--bg);
+    box-shadow: 0 0 20px rgba(63,184,175,0.4);
+  }
+
+  /* ============== PROGRESS DOTS ============== */
+  .prog-dots {
+    position: absolute;
+    top: 16px; right: 24px;
+    display: flex; gap: 6px;
+    z-index: 11;
+  }
+  .prog-dots .d {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--surface-3);
+    transition: all .3s;
+  }
+  .prog-dots .d.done { background: var(--accent); box-shadow: 0 0 6px rgba(63,184,175,0.6); }
+  .prog-dots .d.current { background: var(--accent); transform: scale(1.8); }
+
+  /* ============== COMMON ============== */
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 10.5px; letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--accent); font-weight: 500;
+    padding: 4px 12px;
+    border: 1px solid rgba(63,184,175,0.3);
+    background: rgba(63,184,175,0.06);
+    border-radius: 999px;
+  }
+  .eyebrow::before {
+    content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--accent);
+  }
+
+  .v-head { margin-bottom: 8px; }
+  .v-head h1 {
+    margin-top: 16px;
+    font-size: clamp(1.6rem, 3.8vw, 2.6rem);
+    line-height: 1.1;
+    max-width: 22ch;
+  }
+  .v-head .accent { color: var(--accent); }
+  .v-head .lede {
+    margin-top: 14px;
+    font-size: clamp(14px, 1.3vw, 16px); line-height: 1.5;
+    color: var(--text-dim);
+    max-width: 56ch;
+  }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px;
+    font-family: var(--font-mono);
+    font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+    border-radius: 999px;
+    background: rgba(63,184,175,0.08);
+    border: 1px solid rgba(63,184,175,0.25);
+    color: var(--accent);
+  }
+  .pill.warn { color: var(--warn); background: rgba(230,179,90,0.08); border-color: rgba(230,179,90,0.3); }
+  .pill.danger { color: var(--danger); background: rgba(229,118,118,0.08); border-color: rgba(229,118,118,0.3); }
+  .pill.ghost { color: var(--text-mute); background: transparent; border-color: var(--line); }
+
+  .hint {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 11px; color: var(--text-mute);
+    letter-spacing: 0.08em;
+  }
+  .hint::before {
+    content: "✦"; color: var(--accent); font-size: 14px;
+  }
+
+  /* ============== VIEW 1: START ============== */
+  .start-grid {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 44px;
+    align-items: center;
+    min-height: 100%;
+  }
+  .start-hero h1 {
+    font-size: clamp(2.2rem, 6vw, 4.2rem);
+    line-height: 1.02;
+    max-width: 18ch;
+    margin-top: 20px;
+  }
+  .start-hero .lede {
+    margin-top: 28px;
+    font-size: clamp(15px, 1.4vw, 18px);
+    color: var(--text-dim);
+    max-width: 52ch;
+    line-height: 1.5;
+  }
+  .start-hero .meta {
+    margin-top: 26px;
+    font-family: var(--font-mono);
+    font-size: 11px; letter-spacing: 0.14em;
+    color: var(--text-mute); text-transform: uppercase;
+  }
+  .start-hero .meta strong { color: var(--text); font-weight: 500; }
+  .cta {
+    margin-top: 40px;
+    display: inline-flex; align-items: center; gap: 16px;
+    background: var(--accent);
+    color: var(--bg);
+    padding: 18px 30px;
+    border-radius: 999px;
+    border: 0;
+    font-family: var(--font-sans);
+    font-size: 15px; font-weight: 500;
+    letter-spacing: 0;
+    cursor: pointer;
+    transition: all .2s;
+    box-shadow: 0 10px 40px -8px rgba(63,184,175,0.6);
+  }
+  .cta:hover { transform: translateY(-2px); box-shadow: 0 16px 50px -8px rgba(63,184,175,0.8); }
+  .cta .arr { font-size: 20px; transition: transform .2s; }
+  .cta:hover .arr { transform: translateX(4px); }
+
+  /* Live counter */
+  .counter-stack {
+    display: flex; flex-direction: column; gap: 20px;
+    padding: 32px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+  .counter {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--line);
+  }
+  .counter:last-child { border-bottom: 0; padding-bottom: 0; }
+  .counter .l {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em;
+    color: var(--text-mute); text-transform: uppercase;
+  }
+  .counter .v {
+    font-family: var(--font-mono); font-feature-settings: "tnum" 1;
+    font-size: 2.4rem; font-weight: 500; letter-spacing: -0.02em;
+    color: var(--text);
+    line-height: 1;
+  }
+  .counter .v .u { font-size: 0.4em; color: var(--text-mute); margin-left: 4px; font-weight: 400; }
+  .counter .v.accent { color: var(--accent); }
+
+  /* ============== VIEW 2: PROBLEM (interactive donut) ============== */
+  .problem-stage {
+    display: grid;
+    grid-template-columns: 1fr 1.1fr;
+    gap: 44px;
+    align-items: center;
+    flex: 1;
+    min-height: 0;
+  }
+  .donut-wrap {
+    position: relative;
+    aspect-ratio: 1;
+    max-width: 420px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  .donut-label {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+  }
+  .donut-label .big {
+    font-family: var(--font-mono); font-feature-settings: "tnum" 1;
+    font-size: clamp(2rem, 4vw, 3.2rem); font-weight: 500; letter-spacing: -0.03em;
+    line-height: 1;
+    color: var(--text);
+  }
+  .donut-label .sub {
+    margin-top: 8px;
+    font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.14em;
+    color: var(--text-mute); text-transform: uppercase;
+  }
+  .donut-label.accent .big { color: var(--accent); }
+
+  .donut-side {
+    display: flex; flex-direction: column; gap: 20px;
+  }
+  .split-card {
+    padding: 20px 24px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 16px;
+    align-items: center;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .split-card:hover { border-color: var(--accent); background: rgba(63,184,175,0.04); }
+  .split-card .sw {
+    width: 10px; height: 40px; border-radius: 2px;
+  }
+  .split-card .sw.v { background: var(--accent); }
+  .split-card .sw.n { background: var(--text-mute); }
+  .split-card .info .l {
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--text-mute); font-family: var(--font-mono);
+  }
+  .split-card .info .v {
+    margin-top: 4px;
+    font-family: var(--font-mono); font-feature-settings: "tnum" 1;
+    font-size: 1.6rem; font-weight: 500; color: var(--text);
+    letter-spacing: -0.02em; line-height: 1;
+  }
+  .split-card .pct {
+    font-family: var(--font-mono); font-feature-settings: "tnum" 1;
+    font-size: 1.6rem; font-weight: 500;
+    color: var(--accent);
+  }
+  .split-card.n .pct { color: var(--text-dim); }
+
+  .drill-banner {
+    padding: 16px 20px;
+    background: rgba(63,184,175,0.06);
+    border: 1px dashed rgba(63,184,175,0.4);
+    border-radius: 10px;
+    font-size: 13.5px; color: var(--text);
+    cursor: pointer;
+    transition: all .2s;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  }
+  .drill-banner:hover { background: rgba(63,184,175,0.12); }
+  .drill-banner .arr { color: var(--accent); font-size: 20px; font-weight: 500; }
+
+  /* ============== VIEW 3: HEBEL (activity drill) ============== */
+  .hebel-layout {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 36px;
+    flex: 1;
+    min-height: 0;
+  }
+  .act-bars {
+    display: flex; flex-direction: column;
+    gap: 8px;
+  }
+  .abar {
+    display: grid;
+    grid-template-columns: 1fr 68px;
+    gap: 14px;
+    align-items: center;
+    padding: 14px 18px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .abar:hover { border-color: var(--accent); transform: translateX(4px); }
+  .abar.active { border-color: var(--accent); background: rgba(63,184,175,0.06); }
+  .abar .top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .abar .name { font-size: 13.5px; font-weight: 500; }
+  .abar .bar { height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden; }
+  .abar .bar .f {
+    height: 100%; border-radius: 3px;
+    transition: width .5s cubic-bezier(.4,0,.2,1);
+  }
+  .abar.relevant .bar .f { background: var(--accent); }
+  .abar.strukt .bar .f { background: var(--text-mute); opacity: 0.5; }
+  .abar .pct {
+    font-family: var(--font-mono); font-feature-settings: "tnum" 1;
+    text-align: right; font-weight: 500; font-size: 14px; color: var(--text);
+  }
+  .abar.strukt { opacity: 0.72; }
+  .abar .tag {
+    font-family: var(--font-mono); font-size: 9.5px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    padding: 2px 8px; border-radius: 3px;
+  }
+  .abar.relevant .tag { background: rgba(63,184,175,0.15); color: var(--accent); }
+  .abar.strukt .tag { background: var(--surface-2); color: var(--text-mute); }
+
+  /* Detail pane */
+  .detail {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 32px;
+    display: flex; flex-direction: column;
+    gap: 20px;
+    min-height: 300px;
+  }
+  .detail-empty {
+    display: flex; align-items: center; justify-content: center;
+    height: 100%; color: var(--text-mute);
+    font-family: var(--font-mono); font-size: 12px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    text-align: center;
+  }
+  .detail .num {
+    font-family: var(--font-mono); font-feature-settings: "tnum" 1;
+    font-size: 3.6rem; font-weight: 500; color: var(--accent);
+    letter-spacing: -0.03em; line-height: 1;
+  }
+  .detail .num .u { font-size: 0.4em; color: var(--text-mute); margin-left: 6px; }
+  .detail h3 { font-size: 1.3rem; line-height: 1.25; }
+  .detail .rows { display: flex; flex-direction: column; gap: 14px; }
+  .detail .rows .r h4 {
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--text-mute); margin-bottom: 6px; font-weight: 500;
+  }
+  .detail .rows .r p { font-size: 13.5px; color: var(--text-dim); line-height: 1.55; }
+
+  .next-view-btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    appearance: none; border: 0;
+    background: rgba(63,184,175,0.08);
+    border: 1px solid rgba(63,184,175,0.3);
+    color: var(--accent);
+    padding: 10px 18px; border-radius: 999px;
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.12em; text-transform: uppercase; font-weight: 500;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .next-view-btn:hover { background: rgba(63,184,175,0.18); }
+
+  /* ============== VIEW 4: LÖSUNG (measure builder) ============== */
+  .builder-layout {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 36px;
+  }
+  .m-grid {
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .mcard {
+    padding: 18px 22px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all .2s;
+    display: grid;
+    grid-template-columns: 48px 1fr auto;
+    gap: 16px;
+    align-items: center;
+  }
+  .mcard:hover { border-color: rgba(63,184,175,0.5); }
+  .mcard.on {
+    border-color: var(--accent);
+    background: rgba(63,184,175,0.06);
+    box-shadow: 0 8px 24px -8px rgba(63,184,175,0.25);
+  }
+  .mcard .num {
+    width: 42px; height: 42px;
+    border: 1px solid var(--line); border-radius: 50%;
+    display: grid; place-items: center;
+    font-family: var(--font-mono); font-size: 15px; font-weight: 500;
+    color: var(--text-dim);
+    transition: all .2s;
+  }
+  .mcard.on .num {
+    background: var(--accent); color: var(--bg); border-color: var(--accent);
+  }
+  .mcard .info h4 {
+    font-family: var(--font-sans); font-size: 14.5px; font-weight: 500;
+    color: var(--text); text-transform: none; letter-spacing: -0.01em;
+  }
+  .mcard .info .sub {
+    margin-top: 4px;
+    font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.12em;
+    color: var(--text-mute); text-transform: uppercase;
+  }
+  .mcard .h {
+    font-family: var(--font-mono); font-feature-settings: "tnum" 1;
+    font-size: 1.3rem; font-weight: 500;
+    color: var(--text-dim);
+    transition: color .2s;
+  }
+  .mcard.on .h { color: var(--accent); }
+  .mcard .h .u { font-size: 0.55em; color: var(--text-mute); margin-left: 2px; font-weight: 400; }
+
+  .builder-detail {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 28px;
+    position: sticky; top: 0;
+    align-self: start;
+    display: flex; flex-direction: column;
+    gap: 22px;
+  }
+  .ring-wrap {
+    position: relative;
+    width: 100%; aspect-ratio: 1;
+    max-width: 280px; margin: 0 auto;
+  }
+  .ring-label {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    pointer-events: none;
+    text-align: center;
+  }
+  .ring-label .big {
+    font-family: var(--font-mono); font-feature-settings: "tnum" 1;
+    font-size: 2.6rem; font-weight: 500; letter-spacing: -0.03em;
+    color: var(--accent); line-height: 1;
+  }
+  .ring-label .big .u { font-size: 0.35em; color: var(--text-mute); margin-left: 4px; font-weight: 400; }
+  .ring-label .t {
+    margin-top: 8px;
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em;
+    color: var(--text-mute); text-transform: uppercase;
+  }
+  .ring-label .t strong { color: var(--text); font-weight: 500; }
+
+  .builder-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 16px;
+    background: var(--surface-2);
+    border-radius: 8px;
+  }
+  .builder-meta .bm {
+    text-align: center;
+  }
+  .builder-meta .bm .v {
+    font-family: var(--font-mono); font-feature-settings: "tnum" 1;
+    font-size: 1.2rem; font-weight: 500; color: var(--text);
+  }
+  .builder-meta .bm .l {
+    margin-top: 4px;
+    font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.12em;
+    color: var(--text-mute); text-transform: uppercase;
+  }
+
+  .reset-btn {
+    appearance: none; border: 1px solid var(--line);
+    background: transparent; color: var(--text-mute);
+    padding: 8px 14px; border-radius: 999px;
+    font-family: var(--font-mono); font-size: 10.5px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .reset-btn:hover { color: var(--text); border-color: var(--text-mute); }
+
+  /* ============== VIEW 5: WIRKUNG (slider) ============== */
+  .slider-hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    padding: 32px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+  .slider-hero .col {
+    display: flex; flex-direction: column; gap: 8px;
+    text-align: center;
+    padding: 8px;
+  }
+  .slider-hero .col .l {
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.14em; color: var(--text-mute); text-transform: uppercase;
+  }
+  .slider-hero .col .v {
+    font-family: var(--font-mono); font-feature-settings: "tnum" 1;
+    font-size: clamp(1.6rem, 3vw, 2.4rem); font-weight: 500;
+    color: var(--text); letter-spacing: -0.02em; line-height: 1;
+    transition: color .3s;
+  }
+  .slider-hero .col .v.accent { color: var(--accent); }
+  .slider-hero .col .d {
+    font-family: var(--font-mono); font-feature-settings: "tnum" 1;
+    font-size: 11px; color: var(--accent-2);
+  }
+  .slider-hero .col .d.neg { color: var(--danger); }
+
+  .slider-area {
+    padding: 40px 32px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+  .slider-scale {
+    display: flex; justify-content: space-between;
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em;
+    color: var(--text-mute); text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .slider-rail {
+    position: relative;
+    height: 50px;
+  }
+  .slider-rail input[type=range] {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    -webkit-appearance: none; appearance: none;
+    background: transparent;
+    cursor: pointer;
+    z-index: 2;
+    opacity: 0;
+  }
+  .slider-rail .track {
+    position: absolute;
+    top: 50%; transform: translateY(-50%);
+    left: 0; right: 0;
+    height: 10px;
+    background: var(--surface-2);
+    border-radius: 5px;
+    border: 1px solid var(--line);
+  }
+  .slider-rail .fill {
+    position: absolute;
+    top: 50%; transform: translateY(-50%);
+    left: 0;
+    height: 10px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    border-radius: 5px;
+    transition: width .12s;
+  }
+  .slider-rail .thumb {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: 3px solid var(--bg);
+    box-shadow: 0 0 24px rgba(63,184,175,0.6);
+    transition: left .12s;
+    pointer-events: none;
+  }
+  .slider-rail .thumb-tip {
+    position: absolute;
+    bottom: calc(100% + 14px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent);
+    color: var(--bg);
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-family: var(--font-mono); font-feature-settings: "tnum" 1;
+    font-size: 13px; font-weight: 500;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .slider-rail .thumb-tip::after {
+    content: ""; position: absolute;
+    top: 100%; left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--accent);
+  }
+
+  .slider-markers {
+    display: flex; justify-content: space-between;
+    margin-top: 24px;
+    gap: 10px;
+  }
+  .smark {
+    flex: 1;
+    appearance: none; border: 1px solid var(--line);
+    background: transparent; color: var(--text-dim);
+    padding: 12px 14px; border-radius: 8px;
+    text-align: left;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .smark:hover { border-color: var(--text-dim); color: var(--text); }
+  .smark.on { border-color: var(--accent); background: rgba(63,184,175,0.06); color: var(--text); }
+  .smark .v {
+    font-family: var(--font-mono); font-feature-settings: "tnum" 1;
+    font-size: 1.1rem; font-weight: 500; color: var(--text);
+  }
+  .smark.on .v { color: var(--accent); }
+  .smark .l {
+    font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.12em;
+    text-transform: uppercase; margin-top: 2px; color: var(--text-mute);
+  }
+
+  .wirkung-note {
+    padding: 18px 22px;
+    background: rgba(63,184,175,0.06);
+    border: 1px solid rgba(63,184,175,0.25);
+    border-radius: 10px;
+    font-size: 13.5px; line-height: 1.5;
+    color: var(--text);
+  }
+  .wirkung-note.warn {
+    background: rgba(230,179,90,0.06);
+    border-color: rgba(230,179,90,0.3);
+  }
+
+  /* ============== VIEW 6: UMFRAGE ============== */
+  .survey-tabs {
+    display: flex;
+    gap: 6px;
+    padding: 4px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .survey-tabs::-webkit-scrollbar { display: none; }
+  .stab {
+    appearance: none; border: 0;
+    background: transparent;
+    color: var(--text-dim);
+    padding: 10px 16px; border-radius: 6px;
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all .15s;
+    font-weight: 500;
+  }
+  .stab:hover { color: var(--text); }
+  .stab.on { background: var(--accent); color: var(--bg); }
+
+  .survey-pane {
+    padding: 32px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+  .survey-q {
+    font-family: var(--font-mono); font-size: 10.5px;
+    letter-spacing: 0.14em; color: var(--accent);
+    text-transform: uppercase;
+  }
+  .survey-pane h3 {
+    margin: 10px 0 28px;
+    font-size: 1.35rem; line-height: 1.25;
+    max-width: 40ch;
+  }
+  .survey-bars {
+    display: flex; flex-direction: column; gap: 12px;
+    margin-bottom: 24px;
+  }
+  .sbar {
+    display: grid;
+    grid-template-columns: 180px 1fr 50px;
+    gap: 18px;
+    align-items: center;
+  }
+  .sbar .l { font-size: 14px; color: var(--text-dim); line-height: 1.3; }
+  .sbar .b { height: 28px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+  .sbar .b .f {
+    height: 100%; width: 0%;
+    background: var(--accent);
+    border-radius: 4px;
+    transition: width .7s cubic-bezier(.4,0,.2,1);
+  }
+  .sbar .b .f.warn { background: var(--warn); }
+  .sbar .b .f.danger { background: var(--danger); }
+  .sbar .b .f.mute { background: var(--text-mute); opacity: 0.6; }
+  .sbar .v {
+    font-family: var(--font-mono); font-feature-settings: "tnum" 1;
+    text-align: right; font-weight: 500; font-size: 16px;
+    color: var(--text);
+  }
+  .survey-note {
+    padding: 16px 18px;
+    background: var(--surface-2);
+    border-radius: 8px;
+    font-size: 13px; color: var(--text-dim); line-height: 1.5;
+  }
+  .survey-note strong { color: var(--accent); font-weight: 500; }
+
+  /* ============== VIEW 7: RISIKEN (heatmap) ============== */
+  .matrix-layout {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 36px;
+    flex: 1;
+    min-height: 0;
+  }
+  .heatmap {
+    position: relative;
+    aspect-ratio: 1.1;
+    max-height: 480px;
+    padding: 60px 24px 50px 70px;
+  }
+  .heatmap .yaxis {
+    position: absolute;
+    left: 0; top: 60px; bottom: 50px;
+    width: 60px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    align-items: flex-end;
+  }
+  .heatmap .yaxis span,
+  .heatmap .xaxis span {
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--text-mute);
+  }
+  .heatmap .yaxis-title {
+    position: absolute;
+    left: -20px;
+    top: 50%;
+    transform: rotate(-90deg) translateX(50%);
+    transform-origin: center;
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--accent); white-space: nowrap;
+  }
+  .heatmap .xaxis {
+    position: absolute;
+    left: 70px; right: 24px; bottom: 20px;
+    display: flex; justify-content: space-between;
+  }
+  .heatmap .xaxis-title {
+    position: absolute;
+    left: 50%; bottom: 0;
+    transform: translateX(-50%);
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--accent);
+  }
+  .heatmap .grid {
+    position: absolute;
+    top: 60px; left: 70px; right: 24px; bottom: 50px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 6px;
+  }
+  .heatmap .cell {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    position: relative;
+  }
+  .riskdot {
+    position: absolute;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--bg);
+    display: grid; place-items: center;
+    font-family: var(--font-mono); font-size: 14px; font-weight: 500;
+    cursor: pointer;
+    transition: all .15s;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+  }
+  .riskdot:hover { transform: translate(-50%, -50%) scale(1.15); }
+  .riskdot.active {
+    background: #fff; color: var(--bg);
+    box-shadow: 0 0 0 4px rgba(255,255,255,0.2), 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .riskdot.A { background: var(--danger); }
+  .riskdot.B { background: var(--warn); }
+  .riskdot.C { background: var(--text-mute); }
+
+  .risk-detail {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 28px;
+    display: flex; flex-direction: column;
+    gap: 18px;
+    min-height: 300px;
+  }
+  .risk-detail .prio-big {
+    font-family: var(--font-mono);
+    font-size: 4rem; font-weight: 500; line-height: 1;
+    letter-spacing: -0.04em;
+  }
+  .risk-detail .prio-big.A { color: var(--danger); }
+  .risk-detail .prio-big.B { color: var(--warn); }
+  .risk-detail .prio-big.C { color: var(--text-mute); }
+  .risk-detail .kv { display: grid; grid-template-columns: 100px 1fr; gap: 10px 16px; font-size: 13px; }
+  .risk-detail .kv dt { color: var(--text-mute); font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .risk-detail .kv dd { color: var(--text-dim); margin: 0; line-height: 1.5; }
+  .risk-detail h3 { font-size: 1.2rem; line-height: 1.25; }
+
+  /* ============== VIEW 8: FAZIT ============== */
+  .fazit-pillars {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+    margin: 24px 0;
+  }
+  .pillar {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-top: 3px solid var(--accent);
+    border-radius: 12px;
+    padding: 28px;
+    display: flex; flex-direction: column;
+    gap: 14px;
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .pillar:hover {
+    border-color: var(--accent);
+    border-top-color: var(--accent);
+    transform: translateY(-4px);
+    box-shadow: 0 12px 30px -10px rgba(63,184,175,0.3);
+  }
+  .pillar .num {
+    font-family: var(--font-mono);
+    font-size: 10.5px; letter-spacing: 0.14em;
+    color: var(--accent); text-transform: uppercase; font-weight: 500;
+  }
+  .pillar h3 {
+    font-size: 1.25rem; line-height: 1.2;
+  }
+  .pillar h3 .a { color: var(--accent); }
+  .pillar p { font-size: 13px; color: var(--text-dim); line-height: 1.5; }
+  .pillar .num-big {
+    font-family: var(--font-mono); font-feature-settings: "tnum" 1;
+    font-size: 2.4rem; font-weight: 500;
+    color: var(--text); letter-spacing: -0.02em; line-height: 1;
+    margin-top: auto;
+  }
+  .pillar .num-big.accent { color: var(--accent); }
+
+  .fazit-ausblick {
+    background: rgba(63,184,175,0.04);
+    border: 1px solid rgba(63,184,175,0.25);
+    border-radius: 12px;
+    padding: 28px 32px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 28px;
+    align-items: center;
+  }
+  .fazit-ausblick .icon-big {
+    font-family: var(--font-mono);
+    font-size: 4rem; color: var(--accent);
+    line-height: 1; letter-spacing: -0.04em;
+  }
+  .fazit-ausblick h3 { font-size: 1.2rem; margin-bottom: 8px; }
+  .fazit-ausblick p { font-size: 13.5px; color: var(--text-dim); line-height: 1.55; }
+
+  /* ============== SCROLLBARS ============== */
+  .view::-webkit-scrollbar { width: 8px; }
+  .view::-webkit-scrollbar-track { background: transparent; }
+  .view::-webkit-scrollbar-thumb { background: var(--surface-2); border-radius: 4px; }
+  .view::-webkit-scrollbar-thumb:hover { background: var(--line); }
+
+  /* ============== RESPONSIVE ============== */
+  @media (max-width: 900px) {
+    .topbar { padding: 0 16px; }
+    .tb-info { display: none; }
+    .prog-dots { top: 14px; right: 16px; }
+    .view { padding: 20px 20px 80px; }
+    .tab { padding: 8px 14px; }
+    .tab .lbl { font-size: 9px; }
+    .tab .icon { width: 28px; height: 28px; font-size: 11px; }
+
+    .start-grid { grid-template-columns: 1fr; gap: 28px; }
+    .problem-stage,
+    .hebel-layout,
+    .matrix-layout,
+    .builder-layout {
+      grid-template-columns: 1fr;
+      gap: 22px;
+    }
+    .slider-hero { grid-template-columns: 1fr; gap: 12px; padding: 20px; }
+    .slider-hero .col { padding: 10px; border-bottom: 1px solid var(--line); }
+    .slider-hero .col:last-child { border-bottom: 0; }
+    .fazit-pillars { grid-template-columns: 1fr; }
+    .builder-detail { position: relative; }
+    .sbar { grid-template-columns: 130px 1fr 44px; gap: 12px; }
+    .slider-markers { flex-direction: column; gap: 6px; }
+    .fazit-ausblick { grid-template-columns: 1fr; gap: 12px; padding: 22px; }
+    .fazit-ausblick .icon-big { font-size: 3rem; }
+    .heatmap { padding: 40px 16px 40px 52px; max-height: 380px; aspect-ratio: 1; }
+    .heatmap .yaxis, .heatmap .xaxis { font-size: 9px; }
+    .heatmap .grid { top: 40px; left: 52px; right: 16px; bottom: 40px; }
+    .riskdot { width: 34px; height: 34px; font-size: 12px; }
+  }
+  @media (max-width: 560px) {
+    .tab .lbl { display: none; }
+    .tab { padding: 8px 10px; }
+    .counter .v { font-size: 1.8rem; }
+    .donut-wrap { max-width: 280px; }
+  }
+
+  /* ============== SHARE BUTTON ============== */
+  .share-btn {
+    position: fixed;
+    top: 12px; right: 12px;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    cursor: pointer;
+    z-index: 100;
+    display: grid; place-items: center;
+    font-family: var(--font-mono); font-size: 14px;
+    transition: all .2s;
+  }
+  .share-btn:hover {
+    background: var(--accent); color: var(--bg);
+    border-color: var(--accent);
+    transform: scale(1.08);
+  }
+
+  /* ============== SHARE MODAL ============== */
+  .share-modal {
+    position: fixed; inset: 0;
+    background: rgba(5, 10, 14, 0.78);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 200;
+    display: none;
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .share-modal.open { display: flex; animation: fadeIn .22s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .share-card {
+    background: var(--bg-alt);
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 36px 36px 28px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+  }
+  .share-close {
+    position: absolute;
+    top: 14px; right: 14px;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    cursor: pointer;
+    font-family: var(--font-mono); font-size: 16px;
+    display: grid; place-items: center;
+    transition: all .15s;
+  }
+  .share-close:hover { background: var(--surface-2); color: var(--text); }
+
+  .share-head {
+    font-family: var(--font-mono); font-size: 10.5px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .share-card h2 {
+    font-size: 1.3rem;
+    margin-bottom: 22px;
+    line-height: 1.25;
+    color: var(--text);
+  }
+
+  .qr-frame {
+    background: #fff;
+    padding: 16px;
+    border-radius: 10px;
+    display: inline-block;
+    line-height: 0;
+  }
+  #qrcode canvas, #qrcode img {
+    display: block;
+    width: 220px !important;
+    height: 220px !important;
+  }
+
+  .share-url {
+    margin-top: 20px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--text);
+    word-break: break-all;
+    text-align: left;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .share-url .u { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .share-url button {
+    appearance: none; border: 0;
+    background: var(--accent); color: var(--bg);
+    padding: 6px 12px; border-radius: 5px;
+    font-family: var(--font-mono); font-size: 10.5px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    cursor: pointer; font-weight: 500;
+    flex-shrink: 0;
+  }
+  .share-url button.done { background: var(--accent-2); }
+
+  .share-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .share-actions button {
+    appearance: none;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--text);
+    padding: 12px;
+    border-radius: 8px;
+    font-family: var(--font-sans); font-size: 13px; font-weight: 500;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    gap: 8px;
+    transition: all .15s;
+  }
+  .share-actions button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .share-actions button .i {
+    font-family: var(--font-mono); font-size: 14px;
+  }
+
+  .share-hint {
+    margin-top: 16px;
+    font-family: var(--font-mono); font-size: 10.5px;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text-mute);
+    line-height: 1.6;
+  }
+
+  @media (max-width: 560px) {
+    .share-card { padding: 28px 22px 22px; }
+    .share-card h2 { font-size: 1.1rem; }
+    #qrcode canvas, #qrcode img { width: 180px !important; height: 180px !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============== SHARE BUTTON + MODAL ============== -->
+<button class="share-btn" id="shareBtn" aria-label="App teilen" title="App teilen">⤴</button>
+
+<div class="share-modal" id="shareModal">
+  <div class="share-card">
+    <button class="share-close" id="shareClose" aria-label="Schliessen">✕</button>
+    <div class="share-head">App teilen</div>
+    <h2>Diplomarbeit · <span style="color:var(--accent);">KI bei Spitex Biberist</span></h2>
+    <div class="qr-frame"><div id="qrcode"></div></div>
+    <div class="share-url">
+      <span class="u" id="shareUrlText"></span>
+      <button id="copyBtn">Kopieren</button>
+    </div>
+    <div class="share-actions">
+      <button id="nativeShare"><span class="i">⤴</span> Teilen</button>
+      <button id="openUrl"><span class="i">↗</span> Öffnen</button>
+    </div>
+    <div class="share-hint">
+      QR mit Kamera scannen &middot; Link auf NFC-Tag schreiben &middot; teilen
+    </div>
+  </div>
+</div>
+
+<div class="app">
+
+  <!-- ============== TOPBAR ============== -->
+  <header class="topbar">
+    <div class="tb-brand">
+      <span class="dot"></span>
+      <span>Spitex Biberist · <strong>KI-Prozessoptimierung</strong></span>
+    </div>
+    <div class="tb-info">Diplomarbeit · Zuzana Schaffner · April 2026</div>
+  </header>
+
+  <!-- ============== STAGE (VIEWS) ============== -->
+  <div class="stage">
+
+    <!-- Progress dots -->
+    <div class="prog-dots" id="progDots"></div>
+
+    <!-- VIEW 1: START -->
+    <section class="view active" data-view="start">
+      <div class="view-inner">
+        <div class="start-grid">
+          <div class="start-hero">
+            <span class="eyebrow">Diplomprüfung HF Betriebswirtschaft · HFWSO323-FR</span>
+            <h1>Wie kann KI <span style="color:var(--accent);">wirklich</span> helfen — in einer Pflegeorganisation?</h1>
+            <p class="lede">Eine betriebswirtschaftliche Analyse zu Administration, Produktivität und dem <em>realistischen</em> Hebel Künstlicher Intelligenz bei der Spitex Biberist.</p>
+            <div class="meta">
+              <strong>Zuzana Schaffner</strong> &middot; Personal- &amp; Rechnungswesen<br/>
+              Biberist · 17. April 2026
+            </div>
+            <button class="cta" data-go="problem">Analyse starten <span class="arr">→</span></button>
+            <div class="hint" style="margin-top: 28px;">Entdecke in 7 interaktiven Schritten: Problem · Hebel · Lösung · Wirkung · Stimmen · Risiken · Fazit</div>
+          </div>
+          <div class="counter-stack">
+            <div class="counter">
+              <div class="l">Gesamtarbeitszeit 2024</div>
+              <div class="v mono" data-count="47476" data-unit="h">0<span class="u">h</span></div>
+            </div>
+            <div class="counter">
+              <div class="l">Produktivität IST</div>
+              <div class="v mono" data-count="50.63" data-unit="%" data-decimals="2">0<span class="u">%</span></div>
+            </div>
+            <div class="counter">
+              <div class="l">Handlungsempfehlungen</div>
+              <div class="v accent mono" data-count="5">0</div>
+            </div>
+            <div class="counter">
+              <div class="l">Realistisches Potenzial</div>
+              <div class="v accent mono" data-count="800" data-prefix="~" data-unit="h / Jahr">0<span class="u">h/J</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: PROBLEM -->
+    <section class="view" data-view="problem">
+      <div class="view-inner">
+        <div class="v-head">
+          <span class="eyebrow">01 · IST 2024</span>
+          <h1>Fast die Hälfte der Arbeitszeit ist <span class="accent">nicht verrechenbar.</span></h1>
+          <p class="lede">Im vollkostenbasierten System entscheidet der Anteil verrechenbarer Zeit über die Wirtschaftlichkeit. Tippe auf die Segmente.</p>
+        </div>
+        <div class="problem-stage">
+          <div>
+            <div class="donut-wrap">
+              <canvas id="istDonut"></canvas>
+              <div class="donut-label" id="donutLabel">
+                <div class="big">47'476</div>
+                <div class="sub">Gesamtstunden</div>
+              </div>
+            </div>
+          </div>
+          <div class="donut-side">
+            <div class="split-card" data-donut="v">
+              <div class="sw v"></div>
+              <div class="info">
+                <div class="l">Verrechenbar</div>
+                <div class="v mono">24'039 h</div>
+              </div>
+              <div class="pct mono">50.63 %</div>
+            </div>
+            <div class="split-card n" data-donut="n">
+              <div class="sw n"></div>
+              <div class="info">
+                <div class="l">Nicht verrechenbar</div>
+                <div class="v mono">23'437 h</div>
+              </div>
+              <div class="pct mono">49.37 %</div>
+            </div>
+            <div class="drill-banner" data-go="hebel">
+              <div>
+                <strong style="color:var(--accent);">CHF 1.25 Mio.</strong> entfallen rechnerisch auf nicht-verrechenbare Zeit. Wo genau?
+              </div>
+              <div class="arr">→</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 3: HEBEL -->
+    <section class="view" data-view="hebel">
+      <div class="view-inner">
+        <div class="v-head">
+          <span class="eyebrow">02 · Tätigkeitsanalyse</span>
+          <h1>Vier Prozesse tragen den <span class="accent">betriebswirtschaftlichen Hebel.</span></h1>
+          <p class="lede">Klicke auf eine Tätigkeit — sieh die Informations- &amp; Nutzungslücke dahinter.</p>
+        </div>
+        <div class="hebel-layout">
+          <div class="act-bars" id="actBars"></div>
+          <div class="detail" id="hebelDetail">
+            <div class="detail-empty">← Tätigkeit wählen</div>
+          </div>
+        </div>
+        <button class="next-view-btn" data-go="loesung" style="align-self: flex-end;">Zur Lösung <span>→</span></button>
+      </div>
+    </section>
+
+    <!-- VIEW 4: LÖSUNG -->
+    <section class="view" data-view="loesung">
+      <div class="view-inner">
+        <div class="v-head">
+          <span class="eyebrow">03 · Handlungsempfehlungen</span>
+          <h1>Fünf Massnahmen — <span class="accent">schalte sie zu.</span></h1>
+          <p class="lede">Jede Massnahme bringt Stunden. Wie viel summiert sich? Klicke zum An- und Ausschalten.</p>
+        </div>
+        <div class="builder-layout">
+          <div class="m-grid" id="mGrid"></div>
+          <div class="builder-detail">
+            <div class="ring-wrap">
+              <canvas id="builderRing"></canvas>
+              <div class="ring-label">
+                <div class="big mono" id="builderHours">0<span class="u">h</span></div>
+                <div class="t"><strong id="builderPct">0 %</strong> von 2'344 h Ziel</div>
+              </div>
+            </div>
+            <div class="builder-meta">
+              <div class="bm">
+                <div class="v mono" id="builderGross">0 h</div>
+                <div class="l">Brutto ausgewählt</div>
+              </div>
+              <div class="bm">
+                <div class="v mono" id="builderCount">0 / 5</div>
+                <div class="l">Massnahmen aktiv</div>
+              </div>
+            </div>
+            <button class="reset-btn" id="builderReset">Alle aktivieren</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 5: WIRKUNG -->
+    <section class="view" data-view="wirkung">
+      <div class="view-inner">
+        <div class="v-head">
+          <span class="eyebrow">04 · Wirtschaftliche Bewertung</span>
+          <h1>Was bedeutet das für <span class="accent">Produktivität und Kosten?</span></h1>
+          <p class="lede">Ziehe den Slider und beobachte, wie sich die Kennzahlen verändern.</p>
+        </div>
+        <div class="slider-hero">
+          <div class="col">
+            <div class="l">Produktivitätsquote</div>
+            <div class="v mono accent" id="wProd">50.63 %</div>
+            <div class="d" id="wProdDelta">+0.00</div>
+          </div>
+          <div class="col">
+            <div class="l">CHF / produktive Stunde</div>
+            <div class="v mono" id="wCost">CHF 105.79</div>
+            <div class="d" id="wCostDelta">+0.00</div>
+          </div>
+          <div class="col">
+            <div class="l">Rechn. Gegenwert / Jahr</div>
+            <div class="v mono accent" id="wValue">CHF 0</div>
+            <div class="d" id="wCount">0 h umgewandelt</div>
+          </div>
+        </div>
+        <div class="slider-area">
+          <div class="slider-scale">
+            <span>0 h</span>
+            <span>500 h</span>
+            <span>1'000 h</span>
+            <span>1'500 h</span>
+            <span>2'000 h</span>
+            <span>2'344 h · Ziel</span>
+          </div>
+          <div class="slider-rail">
+            <div class="track"></div>
+            <div class="fill" id="wFill"></div>
+            <div class="thumb" id="wThumb">
+              <div class="thumb-tip" id="wTip">800 h</div>
+            </div>
+            <input type="range" min="0" max="2344" step="10" value="800" id="wSlider" />
+          </div>
+          <div class="slider-markers">
+            <button class="smark" data-h="0"><div class="v">IST 2024</div><div class="l">0 h · Ausgangslage</div></button>
+            <button class="smark on" data-h="800"><div class="v">Netto realistisch</div><div class="l">800 h · 34 % des Ziels</div></button>
+            <button class="smark" data-h="950"><div class="v">Brutto (vor Overlap)</div><div class="l">950 h · 40.5 %</div></button>
+            <button class="smark" data-h="2344"><div class="v">Minimalziel erreicht</div><div class="l">2'344 h · 10 %-Umwandlung</div></button>
+          </div>
+        </div>
+        <div class="wirkung-note" id="wirkungNote">
+          <strong style="color:var(--accent);">Realistische Schätzung:</strong> Einzeleffekte überlagern sich bei Informationssuche, Rückfragen und Koordination teilweise. Die Wirkung entsteht nicht in tieferen Gesamtkosten, sondern in besserer Nutzung vorhandener Ressourcen.
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 6: UMFRAGE -->
+    <section class="view" data-view="umfrage">
+      <div class="view-inner">
+        <div class="v-head">
+          <span class="eyebrow">05 · Mitarbeitendenbefragung</span>
+          <h1>25 Stimmen aus dem Team — <span class="accent">wähle eine Frage.</span></h1>
+          <p class="lede">Online-Befragung · 56 % Rücklaufquote · deskriptive Auswertung wiederkehrender Wahrnehmungen.</p>
+        </div>
+        <div class="survey-tabs" id="surveyTabs">
+          <button class="stab on" data-sq="effekt">Q8 · Produktivitätseffekt</button>
+          <button class="stab" data-sq="zeit">Q9 · Nutzung freier Zeit</button>
+          <button class="stab" data-sq="risiken">Q10 · KI-Bedenken</button>
+          <button class="stab" data-sq="admin">Q3 · Admin-Anteil</button>
+          <button class="stab" data-sq="bereich">Q1 · Bereich</button>
+        </div>
+        <div class="survey-pane" id="surveyPane"></div>
+      </div>
+    </section>
+
+    <!-- VIEW 7: RISIKEN -->
+    <section class="view" data-view="risiken">
+      <div class="view-inner">
+        <div class="v-head">
+          <span class="eyebrow">06 · Risiken &amp; Plan B</span>
+          <h1>Sechs Risiken im <span class="accent">Wahrscheinlichkeits-Raster.</span></h1>
+          <p class="lede">Tippe auf einen Kreis — sieh Priorität, Herleitung und Umgang.</p>
+        </div>
+        <div class="matrix-layout">
+          <div class="heatmap" id="heatmap">
+            <div class="yaxis-title">Auswirkung →</div>
+            <div class="yaxis">
+              <span>hoch</span>
+              <span>mittel</span>
+              <span>tief</span>
+            </div>
+            <div class="grid">
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+              <div class="cell"></div><div class="cell"></div><div class="cell"></div>
+            </div>
+            <div class="xaxis">
+              <span>tief</span>
+              <span>mittel</span>
+              <span>hoch</span>
+            </div>
+            <div class="xaxis-title">Eintrittswahrscheinlichkeit →</div>
+          </div>
+          <div class="risk-detail" id="riskDetail">
+            <div class="detail-empty">← Risiko wählen</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 8: FAZIT -->
+    <section class="view" data-view="fazit">
+      <div class="view-inner">
+        <div class="v-head">
+          <span class="eyebrow">07 · Fazit · Reflexion · Ausblick</span>
+          <h1>KI unterstützt gezielt — <span class="accent">sie ersetzt keine Organisation.</span></h1>
+        </div>
+        <div class="fazit-pillars">
+          <div class="pillar">
+            <div class="num">01 · Problem</div>
+            <h3>Problem = <span class="a">Nutzung.</span></h3>
+            <p>Nicht Digitalisierung ist der Engpass, sondern die <strong style="color:var(--text);">Nutzbarkeit vorhandener Informationen</strong>.</p>
+            <div class="num-big">49<span style="font-size:0.5em;color:var(--text-mute);">%</span></div>
+            <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:0.12em;color:var(--text-mute);text-transform:uppercase;">nicht verrechenbar</div>
+          </div>
+          <div class="pillar">
+            <div class="num">02 · Hebel</div>
+            <h3>Hebel = <span class="a">wenige Prozesse.</span></h3>
+            <p>Vier Unterstützungs&shy;prozesse entscheiden über die <strong style="color:var(--text);">betriebswirtschaftliche Wirkung</strong>.</p>
+            <div class="num-big accent">4</div>
+            <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:0.12em;color:var(--text-mute);text-transform:uppercase;">relevante Tätigkeiten</div>
+          </div>
+          <div class="pillar">
+            <div class="num">03 · Wirkung</div>
+            <h3>Wirkung ≈ <span class="a">800 h / Jahr.</span></h3>
+            <p>Realistisches, vorsichtig geschätztes Potenzial — <strong style="color:var(--text);">keine überhöhte Versprechung</strong>.</p>
+            <div class="num-big accent">+1.69<span style="font-size:0.5em;color:var(--text-mute);">%</span></div>
+            <div style="font-family:var(--font-mono);font-size:10.5px;letter-spacing:0.12em;color:var(--text-mute);text-transform:uppercase;">Produktivitätsgewinn</div>
+          </div>
+        </div>
+        <div class="fazit-ausblick">
+          <div class="icon-big">→</div>
+          <div>
+            <div class="pill" style="margin-bottom: 10px;">Ausblick · Carehome 2040</div>
+            <h3 style="color: var(--text);">Schrittweise, nicht flächendeckend.</h3>
+            <p>Zuerst <strong style="color:var(--text);">organisatorisch robuste und verständliche Lösungen</strong> einführen — darauf aufbauend stärker integrierte KI-Unterstützung. Wirkung nach 6–12 Monaten messbar prüfen und Annahmen kalibrieren.</p>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:center;margin-top:18px;">
+          <button class="cta" data-go="start" style="background:transparent;color:var(--accent);border:1px solid var(--accent);box-shadow:none;"><span class="arr" style="transform:scaleX(-1);">→</span> Von vorne beginnen</button>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ============== TAB BAR ============== -->
+  <nav class="tabbar" id="tabbar">
+    <button class="tab active" data-go="start"><span class="icon">0</span><span class="lbl">Start</span></button>
+    <button class="tab" data-go="problem"><span class="icon">1</span><span class="lbl">Problem</span></button>
+    <button class="tab" data-go="hebel"><span class="icon">2</span><span class="lbl">Hebel</span></button>
+    <button class="tab" data-go="loesung"><span class="icon">3</span><span class="lbl">Lösung</span></button>
+    <button class="tab" data-go="wirkung"><span class="icon">4</span><span class="lbl">Wirkung</span></button>
+    <button class="tab" data-go="umfrage"><span class="icon">5</span><span class="lbl">Stimmen</span></button>
+    <button class="tab" data-go="risiken"><span class="icon">6</span><span class="lbl">Risiken</span></button>
+    <button class="tab" data-go="fazit"><span class="icon">7</span><span class="lbl">Fazit</span></button>
+  </nav>
+
+</div>
+
+<script>
+// =====================================================================
+// DATA
+// =====================================================================
+const ACTIVITIES = [
+  { id:'avn',  code:'79300', name:'Arbeitsvor- &amp; Nachbereitung Pflege', hours:2361, pct:4.98, type:'relevant',
+    gap:'Einsatzrelevante Informationen liegen vor Tourstart nicht direkt nutzbar vor.',
+    obs:'Wiederkehrende dezentrale Vorbereitung → Suchaufwand, unterschiedliche Informationsstände, zusätzliche Abstimmung.',
+    mass:'Mobile Tagesübersicht vor Tourstart' },
+  { id:'kli',  code:'79011', name:'Klientenbesprechung Pflege',            hours:1208, pct:2.55, type:'relevant',
+    gap:'Keine rasch nutzbare, strukturierte Fallsicht vorhanden.',
+    obs:'Viele kurze Abstimmungen, wiederholte Rückfragen, fallbezogene Diskussionen.',
+    mass:'Strukturierte digitale Fallsammlung' },
+  { id:'tv',   code:'51103', name:'TV-Arbeiten / Koordination',             hours:991,  pct:2.09, type:'relevant',
+    gap:'Rückmeldungen nicht vorstrukturiert und zugeordnet.',
+    obs:'Viele Einzelthemen im Tagesverlauf, verteilte Eingangskanäle, Sortier- und Koordinationsaufwand.',
+    mass:'Unterstützte Zuordnung organisatorischer Rückmeldungen' },
+  { id:'epl',  code:'51101', name:'Einsatzplanung Pflege',                  hours:922,  pct:1.94, type:'relevant',
+    gap:'Planungsrelevante Informationen liegen nicht direkt nutzbar vor.',
+    obs:'Wiederholte manuelle Anpassungen, laufende Nachbearbeitung bei Änderungen.',
+    mass:'Automatisiert unterstützte Planungsübersicht' },
+  { id:'weg',  code:'Wegzeit', name:'Wegzeit', hours:4504, pct:9.50, type:'strukt',
+    gap:null, obs:'Strukturell bedingt durch geografische Streuung des Einsatzgebiets.', mass:null },
+  { id:'mzd',  code:'Dienst', name:'Dienst / Mahlzeitendienst', hours:3752, pct:7.91, type:'strukt',
+    gap:null, obs:'Leistungslogisch — ausgelieferte MZD-Boxen.', mass:null },
+  { id:'adm',  code:'50000', name:'Administration Organisation', hours:1492, pct:3.15, type:'strukt',
+    gap:null, obs:'Allgemeiner administrativer Grundaufwand.', mass:null },
+  { id:'ein',  code:'50210', name:'Einführung / Anleitung Pflege', hours:869, pct:1.83, type:'strukt',
+    gap:null, obs:'Einarbeitung neuer Mitarbeitender — notwendiger Aufbauaufwand.', mass:null },
+  { id:'ltg',  code:'50001', name:'Leitungsfunktion Organisation', hours:752, pct:1.59, type:'strukt',
+    gap:null, obs:'Führungs- und Steuerungsaufwand.', mass:null }
+];
+
+const MEASURES = [
+  { id:1, name:'Mobile Tagesübersicht vor Tourstart',  sub:'Arbeitsvor- &amp; Nachbereitung · GenKI + ML', hours:300, cost:'TCHF 15–25', q:'Q4 2026',
+    desc:'Bündelt alle einsatzrelevanten Informationen an einem Ort — Auftrag, Anfahrt, Medikation, aktuelle Notizen.' },
+  { id:2, name:'Strukturierte digitale Fallsammlung',   sub:'Klientenbesprechung · GenKI', hours:180, cost:'TCHF 3–8',  q:'Q3 2026',
+    desc:'Wiederkehrende Situationen werden dokumentiert, für schnelle Rücksprachen verfügbar.' },
+  { id:3, name:'Zuordnung organisatorischer Rückmeldungen', sub:'TV / Koordination · RPA + GenKI', hours:140, cost:'TCHF 8–15', q:'Q4 2026',
+    desc:'Anfragen werden direkt an die zuständige Stelle geleitet — weniger Unterbrüche.' },
+  { id:4, name:'Automatisiert unterstützte Planungsübersicht', sub:'Einsatzplanung · ML', hours:150, cost:'TCHF 15–30', q:'Q4 2026',
+    desc:'Grundplanung wird stabiler. Hinweise zur Auslastung statt manueller Vorabprüfung.' },
+  { id:5, name:'Copilot-Unterstützung Administration', sub:'Bereichsübergreifend · GenKI', hours:180, cost:'TCHF 5–10',  q:'Q3 2026',
+    desc:'Entlastung bei Formulierungen, Zusammenfassungen, Strukturierungen.' }
+];
+
+const RISKS = [
+  { id:'R1', label:'Unzureichende Datenqualität',         prio:'A', x:2, y:2,
+    herleitung:'Informationen liegen nicht immer in ausreichend nutzbarer Form vor.',
+    umgang:'Informationsführung vereinheitlichen, Datenbasis vor Einführung bereinigen.' },
+  { id:'R2', label:'Datenschutz &amp; Datensicherheit',   prio:'A', x:1, y:2,
+    herleitung:'Datenschutz &amp; Datensicherheit sind zentrale Bedingungen (Umfrage Q10: 68 % nennen als Top-Bedenken).',
+    umgang:'KI nur in klar definierten, sicheren Anwendungsfeldern einsetzen.' },
+  { id:'R3', label:'Fehlerhafte KI-Unterstützung',        prio:'B', x:1, y:1,
+    herleitung:'KI ist als Unterstützung, nicht als fachliche Entscheidung einzuordnen.',
+    umgang:'Fachliche Prüfung bleibt bei den Mitarbeitenden.' },
+  { id:'R4', label:'Abhängigkeit von Myneva',             prio:'B', x:2, y:1,
+    herleitung:'Myneva ist Kernsystem und zugleich technische Abhängigkeit.',
+    umgang:'Technische Abhängigkeiten früh klären, Einführung schrittweise.' },
+  { id:'R5', label:'Fehlende Alltagstauglichkeit',        prio:'B', x:1, y:1,
+    herleitung:'Akzeptanz hängt von einfacher Anwendung und sichtbarem Nutzen ab.',
+    umgang:'Klare Anwendungsfälle, einfache Nutzung, sichtbarer Nutzen im Alltag.' },
+  { id:'R6', label:'Begrenzte wirtschaftliche Wirkung',   prio:'C', x:2, y:0,
+    herleitung:'Die Wirkung bleibt spürbar, aber begrenzt (34 % des Ziels).',
+    umgang:'Erwartungen realistisch halten, Wirkung schrittweise überprüfen.' }
+];
+
+const SURVEY = {
+  effekt: {
+    q: 'Q8 · Erwartung',
+    title: 'Führt Reduktion administrativer Aufwände zu mehr produktiver Zeit?',
+    items: [
+      ['Ja, deutlich',  8,  'accent'],
+      ['Ja, teilweise', 11, 'accent'],
+      ['Kaum',          5,  'mute'],
+      ['Nein',          1,  'mute']
+    ],
+    note: '<strong>76 %</strong> der Befragten sehen einen Produktivitätseffekt — deutliche Zustimmung zum Grundansatz der Arbeit.'
+  },
+  zeit: {
+    q: 'Q9 · Wofür die freie Zeit?',
+    title: 'Wofür sollte die durch Entlastung frei werdende Zeit genutzt werden?',
+    items: [
+      ['Direkte Pflege / Betreuung', 17, 'accent'],
+      ['Teamarbeit / Austausch',     12, 'accent'],
+      ['Schulung / Weiterbildung',   10, 'accent'],
+      ['Prozessverbesserung',         6, 'mute'],
+      ['Qualitätsentwicklung',        5, 'mute']
+    ],
+    note: '<strong>68 %</strong> wollen die Zeit für direkte Pflege — bestätigt den Nutzen-Framing der Arbeit.'
+  },
+  risiken: {
+    q: 'Q10 · Bedenken gegenüber KI',
+    title: 'Welche Risiken werden besonders wahrgenommen?',
+    items: [
+      ['Datenschutz / Sicherheit', 17, 'danger'],
+      ['Fehleranfälligkeit',       15, 'danger'],
+      ['IT-Abhängigkeit',          14, 'warn'],
+      ['Akzeptanz im Team',         2, 'mute'],
+      ['Keine Bedenken',            1, 'mute']
+    ],
+    note: 'Datenschutz &amp; Fehleranfälligkeit dominieren — siehe Risiko-Matrix (Priorität A).'
+  },
+  admin: {
+    q: 'Q3 · Admin-Anteil der Arbeitszeit',
+    title: 'Wie hoch schätzt du deinen administrativen Anteil?',
+    items: [
+      ['unter 20 %',  8, 'mute'],
+      ['20–40 %',    10, 'accent'],
+      ['40–60 %',     3, 'warn'],
+      ['über 60 %',   4, 'warn']
+    ],
+    note: '<strong>28 %</strong> verbringen mehr als 40 % der Zeit mit Admin — deutliches Signal für den Handlungsbedarf.'
+  },
+  bereich: {
+    q: 'Q1 · Tätigkeitsbereich',
+    title: 'In welchem Bereich sind die Antwortenden tätig?',
+    items: [
+      ['Pflege',          12, 'accent'],
+      ['Hauswirtschaft',   8, 'accent'],
+      ['Admin / Leitung',  3, 'mute'],
+      ['Mahlzeitdienst',   2, 'mute']
+    ],
+    note: 'Pflege und Hauswirtschaft bilden mit <strong>80 %</strong> den Kernfokus der Rückmeldungen.'
+  }
+};
+
+// =====================================================================
+// CHART DEFAULTS
+// =====================================================================
+Chart.defaults.font.family = '"Helvetica Neue", Helvetica, Arial, sans-serif';
+Chart.defaults.font.size = 12;
+Chart.defaults.color = '#93adbd';
+Chart.defaults.borderColor = '#253645';
+const PAL = { bg:'#13202a', accent:'#3fb8af', accent2:'#7cc67a', mute:'#5d7886', warn:'#e6b35a', text:'#eaf3f7', danger:'#e57676' };
+
+// =====================================================================
+// NAVIGATION
+// =====================================================================
+const VIEWS = ['start', 'problem', 'hebel', 'loesung', 'wirkung', 'umfrage', 'risiken', 'fazit'];
+let currentView = 'start';
+
+function renderProgDots() {
+  const wrap = document.getElementById('progDots');
+  wrap.innerHTML = '';
+  const curIdx = VIEWS.indexOf(currentView);
+  VIEWS.forEach((v, i) => {
+    const d = document.createElement('div');
+    d.className = 'd' + (i < curIdx ? ' done' : '') + (i === curIdx ? ' current' : '');
+    wrap.appendChild(d);
+  });
+}
+
+function goTo(view) {
+  if (view === currentView) return;
+  document.querySelectorAll('.view').forEach(v => {
+    v.classList.toggle('active', v.dataset.view === view);
+    if (v.dataset.view === view) v.scrollTop = 0;
+  });
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.go === view);
+  });
+  currentView = view;
+  renderProgDots();
+  // Trigger view-specific init
+  if (view === 'start') animateCounters();
+  if (view === 'wirkung') updateWirkung(parseInt(document.getElementById('wSlider').value));
+  if (view === 'loesung') updateBuilder();
+}
+
+document.body.addEventListener('click', (e) => {
+  const go = e.target.closest('[data-go]');
+  if (go) goTo(go.dataset.go);
+});
+
+// Keyboard nav
+document.addEventListener('keydown', (e) => {
+  const idx = VIEWS.indexOf(currentView);
+  if (e.key === 'ArrowRight' && idx < VIEWS.length - 1) goTo(VIEWS[idx + 1]);
+  if (e.key === 'ArrowLeft' && idx > 0) goTo(VIEWS[idx - 1]);
+});
+
+// =====================================================================
+// VIEW 1: START — Counter animation
+// =====================================================================
+function animateCounters() {
+  document.querySelectorAll('[data-count]').forEach(el => {
+    const target = parseFloat(el.dataset.count);
+    const decimals = parseInt(el.dataset.decimals || '0');
+    const unit = el.dataset.unit || '';
+    const prefix = el.dataset.prefix || '';
+    const duration = 900;
+    const start = performance.now();
+    function frame(now) {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      const val = target * eased;
+      const v = decimals ? val.toFixed(decimals) : Math.round(val).toLocaleString('de-CH');
+      el.innerHTML = prefix + v + (unit ? `<span class="u">${unit}</span>` : '');
+      if (t < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  });
+}
+animateCounters();
+
+// =====================================================================
+// VIEW 2: PROBLEM — Interactive donut
+// =====================================================================
+const istDonut = new Chart(document.getElementById('istDonut'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Verrechenbar', 'Nicht verrechenbar'],
+    datasets: [{
+      data: [24038.98, 23437.03],
+      backgroundColor: [PAL.accent, PAL.mute],
+      borderColor: PAL.bg,
+      borderWidth: 3,
+      hoverOffset: 10
+    }]
+  },
+  options: {
+    cutout: '68%',
+    responsive: true,
+    maintainAspectRatio: true,
+    animation: { animateRotate: true, duration: 900 },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        enabled: false
+      }
+    },
+    onHover: (e, els) => {
+      e.native.target.style.cursor = els.length ? 'pointer' : 'default';
+      if (els.length) {
+        const i = els[0].index;
+        const lbl = document.getElementById('donutLabel');
+        if (i === 0) {
+          lbl.classList.add('accent');
+          lbl.innerHTML = `<div class="big">24'039</div><div class="sub">Verrechenbar · 50.63 %</div>`;
+        } else {
+          lbl.classList.remove('accent');
+          lbl.innerHTML = `<div class="big">23'437</div><div class="sub">Nicht verrechenbar · 49.37 %</div>`;
+        }
+      }
+    },
+    onClick: (e, els) => {
+      if (!els.length) return;
+      goTo('hebel');
+    }
+  }
+});
+document.getElementById('istDonut').addEventListener('mouseleave', () => {
+  const lbl = document.getElementById('donutLabel');
+  lbl.classList.remove('accent');
+  lbl.innerHTML = `<div class="big">47'476</div><div class="sub">Gesamtstunden</div>`;
+});
+
+document.querySelectorAll('.split-card').forEach(c => {
+  c.addEventListener('mouseenter', () => {
+    const lbl = document.getElementById('donutLabel');
+    if (c.dataset.donut === 'v') {
+      lbl.classList.add('accent');
+      lbl.innerHTML = `<div class="big">24'039</div><div class="sub">Verrechenbar · 50.63 %</div>`;
+    } else {
+      lbl.classList.remove('accent');
+      lbl.innerHTML = `<div class="big">23'437</div><div class="sub">Nicht verrechenbar · 49.37 %</div>`;
+    }
+  });
+  c.addEventListener('mouseleave', () => {
+    const lbl = document.getElementById('donutLabel');
+    lbl.classList.remove('accent');
+    lbl.innerHTML = `<div class="big">47'476</div><div class="sub">Gesamtstunden</div>`;
+  });
+});
+
+// =====================================================================
+// VIEW 3: HEBEL — Activity drill-down
+// =====================================================================
+const maxPct = Math.max(...ACTIVITIES.map(a => a.pct));
+const sortedActs = [...ACTIVITIES].sort((a,b) => {
+  if (a.type !== b.type) return a.type === 'relevant' ? -1 : 1;
+  return b.pct - a.pct;
+});
+
+function renderActBars() {
+  const wrap = document.getElementById('actBars');
+  wrap.innerHTML = '';
+  sortedActs.forEach(a => {
+    const bar = document.createElement('div');
+    bar.className = 'abar ' + a.type;
+    bar.dataset.id = a.id;
+    bar.innerHTML = `
+      <div>
+        <div class="top">
+          <span class="name">${a.name}</span>
+          <span class="tag">${a.type === 'relevant' ? 'Informationslücke' : 'Strukturell'}</span>
+        </div>
+        <div class="bar"><div class="f" style="width: ${(a.pct/maxPct*100).toFixed(1)}%"></div></div>
+      </div>
+      <div class="pct">${a.pct.toFixed(2)} %</div>
+    `;
+    bar.addEventListener('click', () => showActDetail(a.id));
+    wrap.appendChild(bar);
+  });
+}
+renderActBars();
+
+function showActDetail(id) {
+  document.querySelectorAll('.abar').forEach(b => b.classList.toggle('active', b.dataset.id === id));
+  const a = ACTIVITIES.find(x => x.id === id);
+  const pane = document.getElementById('hebelDetail');
+  if (a.type === 'relevant') {
+    pane.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;">
+        <div>
+          <div class="pill warn">Informations- &amp; Nutzungslücke</div>
+          <div class="num" style="margin-top:14px;">${a.hours.toLocaleString('de-CH')}<span class="u">h</span></div>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-mute);letter-spacing:0.14em;text-transform:uppercase;margin-top:6px;">${a.pct.toFixed(2)} % der Gesamtzeit · Code ${a.code}</div>
+        </div>
+      </div>
+      <h3>${a.name}</h3>
+      <div class="rows">
+        <div class="r">
+          <h4>Beobachtung im Alltag</h4>
+          <p>${a.obs}</p>
+        </div>
+        <div class="r">
+          <h4>Lücke zum SOLL</h4>
+          <p>${a.gap}</p>
+        </div>
+      </div>
+      <div style="padding:14px 18px;background:rgba(63,184,175,0.06);border:1px solid rgba(63,184,175,0.25);border-radius:8px;display:flex;align-items:center;justify-content:space-between;gap:14px;cursor:pointer;" onclick="goTo('loesung')">
+        <div style="font-size:13px;color:var(--text);">→ Lösung: <strong style="color:var(--accent);">${a.mass}</strong></div>
+        <span style="color:var(--accent);font-size:18px;">→</span>
+      </div>
+    `;
+  } else {
+    pane.innerHTML = `
+      <div>
+        <div class="pill ghost">Strukturell notwendig</div>
+        <div class="num" style="margin-top:14px;color:var(--text-mute);">${a.hours.toLocaleString('de-CH')}<span class="u">h</span></div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text-mute);letter-spacing:0.14em;text-transform:uppercase;margin-top:6px;">${a.pct.toFixed(2)} % der Gesamtzeit · Code ${a.code}</div>
+      </div>
+      <h3>${a.name}</h3>
+      <div class="rows">
+        <div class="r">
+          <h4>Beobachtung</h4>
+          <p>${a.obs}</p>
+        </div>
+        <div class="r">
+          <h4>Einordnung im IST</h4>
+          <p>Diese Tätigkeit ist aufgrund ihrer Funktion und Entstehungslogik <strong style="color:var(--text);">betriebsnotwendig</strong> und nicht Gegenstand der GAP-Analyse.</p>
+        </div>
+      </div>
+    `;
+  }
+}
+
+// =====================================================================
+// VIEW 4: LÖSUNG — Measure builder
+// =====================================================================
+const measureState = { active: new Set([1,2,3,4,5]) };
+let builderRingChart;
+
+function renderMGrid() {
+  const wrap = document.getElementById('mGrid');
+  wrap.innerHTML = '';
+  MEASURES.forEach(m => {
+    const card = document.createElement('div');
+    card.className = 'mcard' + (measureState.active.has(m.id) ? ' on' : '');
+    card.innerHTML = `
+      <div class="num">${m.id}</div>
+      <div class="info">
+        <h4>${m.name}</h4>
+        <div class="sub">${m.sub} · ${m.cost} · ${m.q}</div>
+      </div>
+      <div class="h mono">${m.hours}<span class="u">h</span></div>
+    `;
+    card.addEventListener('click', () => {
+      if (measureState.active.has(m.id)) measureState.active.delete(m.id);
+      else measureState.active.add(m.id);
+      card.classList.toggle('on');
+      updateBuilder();
+    });
+    wrap.appendChild(card);
+  });
+}
+renderMGrid();
+
+function updateBuilder() {
+  const brutto = MEASURES.filter(m => measureState.active.has(m.id)).reduce((s,m) => s + m.hours, 0);
+  // overlap reduction: 950h brutto → 800h netto, so factor 800/950 ≈ 0.842
+  const netto = Math.round(brutto * 0.842);
+  const pct = (netto / 2344 * 100).toFixed(1);
+  const count = measureState.active.size;
+
+  document.getElementById('builderHours').innerHTML = `${netto.toLocaleString('de-CH')}<span class="u">h</span>`;
+  document.getElementById('builderPct').textContent = pct + ' %';
+  document.getElementById('builderGross').textContent = brutto.toLocaleString('de-CH') + ' h';
+  document.getElementById('builderCount').textContent = count + ' / 5';
+
+  // Update ring chart
+  const reached = Math.min(netto, 2344);
+  const remaining = 2344 - reached;
+  if (builderRingChart) {
+    builderRingChart.data.datasets[0].data = [reached, remaining];
+    builderRingChart.update('none');
+  } else {
+    builderRingChart = new Chart(document.getElementById('builderRing'), {
+      type: 'doughnut',
+      data: {
+        datasets: [{
+          data: [reached, remaining],
+          backgroundColor: [PAL.accent, '#1a2a36'],
+          borderColor: PAL.bg, borderWidth: 2
+        }]
+      },
+      options: {
+        cutout: '72%', responsive: true, maintainAspectRatio: true,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        animation: { duration: 400 }
+      }
+    });
+  }
+}
+
+document.getElementById('builderReset').addEventListener('click', () => {
+  if (measureState.active.size === 5) {
+    measureState.active.clear();
+  } else {
+    measureState.active = new Set([1,2,3,4,5]);
+  }
+  renderMGrid();
+  updateBuilder();
+});
+updateBuilder();
+
+// =====================================================================
+// VIEW 5: WIRKUNG — Scenario slider
+// =====================================================================
+function updateWirkung(h) {
+  // IST: 24039 productive / 47476 total = 50.63 %, CHF 105.79/h
+  // When h hours converted: new productive = 24039 + h, new quote = (24039+h)/47476
+  const newProd = 24039 + h;
+  const newQuote = newProd / 47476 * 100;
+  const newCost = 2543033 / newProd;
+  const value = h * 2543033 / 47476; // CHF value of converted hours
+  const deltaQuote = newQuote - 50.63;
+  const deltaCost = newCost - 105.79;
+
+  document.getElementById('wProd').textContent = newQuote.toFixed(2) + ' %';
+  document.getElementById('wCost').textContent = 'CHF ' + newCost.toFixed(2);
+  document.getElementById('wValue').textContent = 'CHF ' + Math.round(value).toLocaleString('de-CH');
+  document.getElementById('wProdDelta').textContent = (deltaQuote >= 0 ? '+' : '') + deltaQuote.toFixed(2) + ' %-Punkte';
+  document.getElementById('wCostDelta').textContent = (deltaCost >= 0 ? '+' : '') + 'CHF ' + deltaCost.toFixed(2);
+  document.getElementById('wCostDelta').className = 'd' + (deltaCost < 0 ? '' : ' neg');
+  document.getElementById('wCount').textContent = h + ' h umgewandelt';
+  document.getElementById('wTip').textContent = h.toLocaleString('de-CH') + ' h';
+
+  const pct = h / 2344 * 100;
+  document.getElementById('wFill').style.width = pct + '%';
+  document.getElementById('wThumb').style.left = pct + '%';
+
+  // Update active marker
+  document.querySelectorAll('.smark').forEach(b => {
+    b.classList.toggle('on', parseInt(b.dataset.h) === h);
+  });
+
+  // Update note
+  const note = document.getElementById('wirkungNote');
+  if (h === 0) {
+    note.className = 'wirkung-note warn';
+    note.innerHTML = '<strong style="color:var(--warn);">IST 2024:</strong> Ausgangslage. Die Hälfte der Arbeitszeit ist nicht verrechenbar, Personalaufwand liegt bei CHF 105.79 pro produktiver Stunde.';
+  } else if (h <= 800) {
+    note.className = 'wirkung-note';
+    note.innerHTML = '<strong style="color:var(--accent);">Realistisch:</strong> Nach Abzug von Überschneidungen zwischen den Massnahmen. Wirkung entsteht in besserer Nutzung — nicht in tieferen Gesamtkosten.';
+  } else if (h <= 950) {
+    note.className = 'wirkung-note warn';
+    note.innerHTML = '<strong style="color:var(--warn);">Brutto-Szenario:</strong> Summe aller Einzeleffekte ohne Overlap-Reduktion. Unrealistisch wegen Überschneidungen bei Suchaufwand und Rückfragen.';
+  } else {
+    note.className = 'wirkung-note warn';
+    note.innerHTML = '<strong style="color:var(--warn);">Zielszenario:</strong> 10 % der nicht-verrechenbaren Zeit umgewandelt — dieses Minimalziel wird <strong>mit den 5 Massnahmen allein nicht erreicht</strong>. Das ist eine zentrale Erkenntnis der Arbeit.';
+  }
+}
+document.getElementById('wSlider').addEventListener('input', (e) => updateWirkung(parseInt(e.target.value)));
+document.querySelectorAll('.smark').forEach(b => {
+  b.addEventListener('click', () => {
+    const h = parseInt(b.dataset.h);
+    document.getElementById('wSlider').value = h;
+    updateWirkung(h);
+  });
+});
+updateWirkung(800);
+
+// =====================================================================
+// VIEW 6: UMFRAGE
+// =====================================================================
+function renderSurvey(key) {
+  const d = SURVEY[key];
+  const pane = document.getElementById('surveyPane');
+  const max = Math.max(...d.items.map(i => i[1]));
+  pane.innerHTML = `
+    <div class="survey-q">${d.q}</div>
+    <h3>${d.title}</h3>
+    <div class="survey-bars" id="surveyBars"></div>
+    <div class="survey-note">${d.note}</div>
+  `;
+  const bars = document.getElementById('surveyBars');
+  d.items.forEach(([l, v, cls]) => {
+    const row = document.createElement('div');
+    row.className = 'sbar';
+    row.innerHTML = `<div class="l">${l}</div><div class="b"><div class="f ${cls}" style="width:0%"></div></div><div class="v">${v}</div>`;
+    bars.appendChild(row);
+    requestAnimationFrame(() => {
+      row.querySelector('.f').style.width = (v / max * 100).toFixed(1) + '%';
+    });
+  });
+}
+renderSurvey('effekt');
+document.getElementById('surveyTabs').addEventListener('click', (e) => {
+  if (e.target.tagName !== 'BUTTON') return;
+  document.querySelectorAll('.stab').forEach(b => b.classList.remove('on'));
+  e.target.classList.add('on');
+  renderSurvey(e.target.dataset.sq);
+});
+
+// =====================================================================
+// VIEW 7: RISIKEN — Heatmap
+// =====================================================================
+function renderHeatmap() {
+  const hm = document.getElementById('heatmap');
+  // position risks on the grid relative to its size
+  // grid 3x3: cols 0=tief 1=mittel 2=hoch (eintrittswahrsch.), rows y=0 tief, y=1 mittel, y=2 hoch (auswirkung)
+  // remove existing dots
+  hm.querySelectorAll('.riskdot').forEach(d => d.remove());
+
+  RISKS.forEach((r, idx) => {
+    const dot = document.createElement('div');
+    dot.className = 'riskdot ' + r.prio;
+    dot.textContent = r.id;
+    dot.dataset.id = r.id;
+    dot.style.left = ((r.x + 0.5) / 3 * 100) + '%';
+    // y inverted: visually top = high auswirkung
+    dot.style.top = ((2 - r.y + 0.5) / 3 * 100) + '%';
+    // offset a bit if same cell
+    const same = RISKS.filter(x => x.x === r.x && x.y === r.y);
+    if (same.length > 1) {
+      const myIdx = same.indexOf(r);
+      dot.style.transform = `translate(calc(-50% + ${(myIdx - (same.length - 1)/2) * 28}px), -50%)`;
+    }
+    dot.addEventListener('click', () => showRisk(r.id));
+    hm.appendChild(dot);
+  });
+}
+renderHeatmap();
+
+function showRisk(id) {
+  document.querySelectorAll('.riskdot').forEach(d => d.classList.toggle('active', d.dataset.id === id));
+  const r = RISKS.find(x => x.id === id);
+  const pane = document.getElementById('riskDetail');
+  const label = { A: 'Priorität A · sofort adressieren', B: 'Priorität B · proaktiv begleiten', C: 'Priorität C · beobachten' };
+  pane.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;">
+      <div>
+        <div class="pill ${r.prio === 'A' ? 'danger' : r.prio === 'B' ? 'warn' : 'ghost'}">${label[r.prio]}</div>
+        <div class="prio-big ${r.prio}">${r.prio}</div>
+      </div>
+      <div style="text-align:right;font-family:var(--font-mono);font-size:11px;letter-spacing:0.14em;color:var(--text-mute);text-transform:uppercase;">Risiko ${r.id}</div>
+    </div>
+    <h3>${r.label}</h3>
+    <dl class="kv">
+      <dt>Herleitung</dt><dd>${r.herleitung}</dd>
+      <dt>Umgang</dt><dd>${r.umgang}</dd>
+      <dt>Wahrsch.</dt><dd>${['tief','mittel','hoch'][r.x]}</dd>
+      <dt>Auswirkung</dt><dd>${['tief','mittel','hoch'][r.y]}</dd>
+    </dl>
+  `;
+}
+
+// =====================================================================
+// SHARE / QR
+// =====================================================================
+const shareBtn = document.getElementById('shareBtn');
+const shareModal = document.getElementById('shareModal');
+const shareClose = document.getElementById('shareClose');
+const shareUrlText = document.getElementById('shareUrlText');
+const copyBtn = document.getElementById('copyBtn');
+const nativeShareBtn = document.getElementById('nativeShare');
+const openUrlBtn = document.getElementById('openUrl');
+
+// Share canonical URL — falls back to current if not set
+const CANONICAL_URL = (typeof window !== 'undefined' && window.APP_URL) || window.location.href;
+const shareUrl = CANONICAL_URL.replace(/#.*$/, '').replace(/\/$/, '') + '/';
+shareUrlText.textContent = shareUrl;
+
+let qrRendered = false;
+function openShare() {
+  shareModal.classList.add('open');
+  if (!qrRendered && typeof QRCode !== 'undefined') {
+    new QRCode(document.getElementById('qrcode'), {
+      text: shareUrl,
+      width: 220,
+      height: 220,
+      colorDark: '#0a1218',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+    qrRendered = true;
+  }
+}
+function closeShare() { shareModal.classList.remove('open'); }
+
+shareBtn.addEventListener('click', openShare);
+shareClose.addEventListener('click', closeShare);
+shareModal.addEventListener('click', (e) => { if (e.target === shareModal) closeShare(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeShare(); });
+
+copyBtn.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(shareUrl);
+    copyBtn.textContent = 'Kopiert ✓';
+    copyBtn.classList.add('done');
+    setTimeout(() => { copyBtn.textContent = 'Kopieren'; copyBtn.classList.remove('done'); }, 1600);
+  } catch (_) {
+    // Fallback: select & copy
+    const t = document.createElement('textarea');
+    t.value = shareUrl; document.body.appendChild(t);
+    t.select(); document.execCommand('copy'); document.body.removeChild(t);
+    copyBtn.textContent = 'Kopiert ✓'; copyBtn.classList.add('done');
+    setTimeout(() => { copyBtn.textContent = 'Kopieren'; copyBtn.classList.remove('done'); }, 1600);
+  }
+});
+
+nativeShareBtn.addEventListener('click', async () => {
+  const payload = {
+    title: 'KI bei Spitex Biberist · Diplomarbeit',
+    text: 'Interaktive Präsentation der Diplomarbeit von Zuzana Schaffner',
+    url: shareUrl
+  };
+  if (navigator.share) {
+    try { await navigator.share(payload); } catch (_) {}
+  } else {
+    // Fallback: copy + open mail/messages link
+    window.location.href = 'mailto:?subject=' + encodeURIComponent(payload.title) + '&body=' + encodeURIComponent(payload.text + '\n\n' + payload.url);
+  }
+});
+
+openUrlBtn.addEventListener('click', () => {
+  window.open(shareUrl, '_blank');
+});
+
+// =====================================================================
+// INIT
+// =====================================================================
+renderProgDots();
+</script>
+</body>
+</html>
