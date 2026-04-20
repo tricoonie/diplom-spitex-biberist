@@ -537,6 +537,8 @@
     font-family: var(--font-mono); font-size: 15px; font-weight: 500;
     color: var(--text-dim);
     transition: all .2s;
+    align-self: start;
+    margin-top: 2px;
   }
   .mcard.on .num {
     background: var(--accent); color: var(--bg); border-color: var(--accent);
@@ -544,20 +546,86 @@
   .mcard .info h4 {
     font-family: var(--font-sans); font-size: 14.5px; font-weight: 500;
     color: var(--text); text-transform: none; letter-spacing: -0.01em;
+    line-height: 1.3;
   }
   .mcard .info .sub {
     margin-top: 4px;
     font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.12em;
     color: var(--text-mute); text-transform: uppercase;
   }
+  .mcard .info .what {
+    margin-top: 10px;
+    font-size: 13px; line-height: 1.5;
+    color: var(--text-dim);
+  }
+  .mcard.on .info .what { color: var(--text); }
+  .mcard .info .bullets {
+    margin: 10px 0 0; padding: 0; list-style: none;
+    display: flex; flex-direction: column; gap: 4px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .35s ease, margin .25s ease;
+  }
+  .mcard.on .info .bullets { max-height: 220px; margin: 12px 0 0; }
+  .mcard .info .bullets li {
+    position: relative;
+    padding-left: 20px;
+    font-size: 12.5px; line-height: 1.5;
+    color: var(--text-dim);
+  }
+  .mcard .info .bullets li::before {
+    content: "›";
+    position: absolute; left: 4px; top: 0;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-weight: 500;
+  }
+  .mcard .info .outcome {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: rgba(63,184,175,0.06);
+    border-left: 2px solid var(--accent);
+    font-size: 12.5px; line-height: 1.5;
+    color: var(--text);
+    max-height: 0;
+    overflow: hidden;
+    padding-top: 0; padding-bottom: 0;
+    margin-top: 0;
+    border-width: 0;
+    transition: all .25s ease;
+  }
+  .mcard.on .info .outcome {
+    max-height: 120px;
+    padding-top: 10px; padding-bottom: 10px;
+    margin-top: 12px;
+    border-left-width: 2px;
+  }
+  .mcard .info .outcome strong {
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.14em;
+    color: var(--accent); text-transform: uppercase; font-weight: 500;
+    display: block; margin-bottom: 4px;
+  }
   .mcard .h {
     font-family: var(--font-mono); font-feature-settings: "tnum" 1;
     font-size: 1.3rem; font-weight: 500;
     color: var(--text-dim);
     transition: color .2s;
+    align-self: start;
+    margin-top: 2px;
   }
   .mcard.on .h { color: var(--accent); }
   .mcard .h .u { font-size: 0.55em; color: var(--text-mute); margin-left: 2px; font-weight: 400; }
+  .mcard .expand-hint {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 10px;
+    font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--text-mute);
+    transition: color .2s;
+  }
+  .mcard .expand-hint .chv { transition: transform .25s; }
+  .mcard.on .expand-hint { color: var(--accent); }
+  .mcard.on .expand-hint .chv { transform: rotate(180deg); }
 
   .builder-detail {
     background: var(--surface);
@@ -1600,16 +1668,50 @@ const ACTIVITIES = [
 ];
 
 const MEASURES = [
-  { id:1, name:'Mobile Tagesübersicht vor Tourstart',  sub:'Arbeitsvor- &amp; Nachbereitung · GenKI + ML', hours:300, cost:'TCHF 15–25', q:'Q4 2026',
-    desc:'Bündelt alle einsatzrelevanten Informationen an einem Ort — Auftrag, Anfahrt, Medikation, aktuelle Notizen.' },
-  { id:2, name:'Strukturierte digitale Fallsammlung',   sub:'Klientenbesprechung · GenKI', hours:180, cost:'TCHF 3–8',  q:'Q3 2026',
-    desc:'Wiederkehrende Situationen werden dokumentiert, für schnelle Rücksprachen verfügbar.' },
+  { id:1, name:'Mobile Tagesübersicht vor Tourstart', sub:'Arbeitsvor- &amp; Nachbereitung · GenKI + ML', hours:300, cost:'TCHF 15–25', q:'Q4 2026',
+    what:'Auf dem Tablet erscheint vor Tourstart eine KI-aufbereitete Übersicht aus Myneva-Daten.',
+    bullets:[
+      'Filtert relevante Hinweise pro Einsatz und priorisiert sie',
+      'Zeigt Material- &amp; Mitnahmehinweise, Schlüsselinfos, Reihenfolge der Tour',
+      'Ersetzt das Zusammensuchen in mehreren Systemen'
+    ],
+    outcome:'Mitarbeitende starten informiert in den Tag, Vorbereitungszeit sinkt messbar.' },
+
+  { id:2, name:'Strukturierte digitale Fallsammlung', sub:'Klientenbesprechung · GenKI', hours:180, cost:'TCHF 3–8', q:'Q3 2026',
+    what:'Digitales Gedächtnis für wiederkehrende pflegerische Situationen mit KI-Suche.',
+    bullets:[
+      'Erfasst Ausgangslage, Verlauf und bisherige Lösung strukturiert',
+      'KI sucht ähnliche Fälle und verdichtet sie zu einer Kurzfassung',
+      'Fachliche Beurteilung bleibt bei den Pflegefachpersonen'
+    ],
+    outcome:'Rücksprachen starten mit einheitlichem Stand — weniger Doppelabklärungen.' },
+
   { id:3, name:'Zuordnung organisatorischer Rückmeldungen', sub:'TV / Koordination · RPA + GenKI', hours:140, cost:'TCHF 8–15', q:'Q4 2026',
-    desc:'Anfragen werden direkt an die zuständige Stelle geleitet — weniger Unterbrüche.' },
+    what:'Eingehende Nachrichten werden KI-gestützt vorsortiert und zugeordnet.',
+    bullets:[
+      'Versteht Inhalte aus Mail, Telefon-Notizen und weiteren Kanälen',
+      'Ordnet automatisch einer Kategorie und zuständigen Stelle zu',
+      'Endgültige Bearbeitung bleibt bei der zuständigen Person'
+    ],
+    outcome:'Weniger Unterbrüche, klarere Zuständigkeiten im Tagesverlauf.' },
+
   { id:4, name:'Automatisiert unterstützte Planungsübersicht', sub:'Einsatzplanung · ML', hours:150, cost:'TCHF 15–30', q:'Q4 2026',
-    desc:'Grundplanung wird stabiler. Hinweise zur Auslastung statt manueller Vorabprüfung.' },
-  { id:5, name:'Copilot-Unterstützung Administration', sub:'Bereichsübergreifend · GenKI', hours:180, cost:'TCHF 5–10',  q:'Q3 2026',
-    desc:'Entlastung bei Formulierungen, Zusammenfassungen, Strukturierungen.' }
+    what:'ML-gestützte Planungs&shy;ansicht, die vorhandene Myneva-Daten direkt nutzbar bündelt.',
+    bullets:[
+      'Macht Reihenfolge, Zuordnung und Anpassungsbedarf auf einen Blick sichtbar',
+      'Zeigt Auslastungs&shy;hinweise statt manueller Vorabprüfung',
+      'Planungsentscheidung bleibt bei der Einsatzplanung'
+    ],
+    outcome:'Grundplanung wird stabiler, kurzfristige Anpassungen nehmen ab.' },
+
+  { id:5, name:'Copilot-Unterstützung Administration', sub:'Bereichsübergreifend · GenKI', hours:180, cost:'TCHF 5–10', q:'Q3 2026',
+    what:'Microsoft Copilot an PC-Arbeits&shy;plätzen für definierte Standard&shy;anwendungen.',
+    bullets:[
+      'Textentwürfe, Antwortvorbereitung, Gesprächsnotizen',
+      'Sprachliche Verdichtung und Strukturierung interner Informationen',
+      'Fachliche Prüfung bleibt bei den Mitarbeitenden'
+    ],
+    outcome:'Wiederkehrende Schreib&shy;arbeiten laufen schneller und einheitlicher.' }
 ];
 
 const RISKS = [
@@ -1937,11 +2039,16 @@ function renderMGrid() {
   MEASURES.forEach(m => {
     const card = document.createElement('div');
     card.className = 'mcard' + (measureState.active.has(m.id) ? ' on' : '');
+    const bulletsHtml = m.bullets.map(b => `<li>${b}</li>`).join('');
     card.innerHTML = `
       <div class="num">${m.id}</div>
       <div class="info">
         <h4>${m.name}</h4>
         <div class="sub">${m.sub} · ${m.cost} · ${m.q}</div>
+        <div class="what">${m.what}</div>
+        <ul class="bullets">${bulletsHtml}</ul>
+        <div class="outcome"><strong>Wirkung im Alltag</strong>${m.outcome}</div>
+        <div class="expand-hint"><span class="chv">▾</span><span>${measureState.active.has(m.id) ? 'Aktiv · Tippen zum Ausblenden' : 'Details zeigen · Tippen'}</span></div>
       </div>
       <div class="h mono">${m.hours}<span class="u">h</span></div>
     `;
@@ -1949,6 +2056,9 @@ function renderMGrid() {
       if (measureState.active.has(m.id)) measureState.active.delete(m.id);
       else measureState.active.add(m.id);
       card.classList.toggle('on');
+      // Update the hint text
+      const hint = card.querySelector('.expand-hint span:last-child');
+      hint.textContent = measureState.active.has(m.id) ? 'Aktiv · Tippen zum Ausblenden' : 'Details zeigen · Tippen';
       updateBuilder();
     });
     wrap.appendChild(card);
