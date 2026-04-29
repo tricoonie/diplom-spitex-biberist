@@ -247,6 +247,36 @@
     content: "✦"; color: var(--accent); font-size: 14px;
   }
 
+  /* Research questions in start hero */
+  .research-q {
+    margin-top: 28px;
+    padding: 18px 22px;
+    border-left: 2px solid var(--accent);
+    background: rgba(63,184,175,0.04);
+    border-radius: 0 8px 8px 0;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .research-row { display: flex; align-items: flex-start; gap: 14px; }
+  .rq-tag {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); font-weight: 500;
+    padding: 4px 9px;
+    border: 1px solid rgba(63,184,175,0.4);
+    border-radius: 999px;
+    margin-top: 1px;
+    white-space: nowrap;
+  }
+  .rq-text {
+    font-size: 14px; line-height: 1.45;
+    color: var(--text-dim);
+    font-style: italic;
+  }
+  @media (max-width: 560px) {
+    .research-row { flex-direction: column; gap: 6px; }
+  }
+
   /* ============== VIEW 1: START ============== */
   .start-grid {
     display: grid;
@@ -1321,7 +1351,7 @@
       <span class="dot"></span>
       <span>Spitex Biberist · <strong>KI-Prozessoptimierung</strong></span>
     </div>
-    <div class="tb-info">Diplomarbeit · Zuzana Schaffner · April 2026</div>
+    <div class="tb-info">Diplomarbeit · Zuzana Schaffner · Mai 2026</div>
   </header>
 
   <!-- ============== STAGE (VIEWS) ============== -->
@@ -1336,11 +1366,21 @@
         <div class="start-grid">
           <div class="start-hero">
             <span class="eyebrow">Diplomprüfung HF Betriebswirtschaft · HFWSO323-FR</span>
-            <h1>Wie kann KI <span style="color:var(--accent);">wirklich</span> helfen — in einer Pflegeorganisation?</h1>
+            <h1>Wie kann KI Administration reduzieren und die <span style="color:var(--accent);">Produktivität der Spitex Biberist</span> erhöhen?</h1>
             <p class="lede">Eine betriebswirtschaftliche Analyse zu Administration, Produktivität und dem <em>realistischen</em> Hebel Künstlicher Intelligenz bei der Spitex Biberist.</p>
+            <div class="research-q">
+              <div class="research-row">
+                <span class="rq-tag">Unterfrage 1</span>
+                <span class="rq-text">Was bedeutet der Einsatz von KI für die Spitex Biberist?</span>
+              </div>
+              <div class="research-row">
+                <span class="rq-tag">Unterfrage 2</span>
+                <span class="rq-text">Wie verändert sich die Vollkostenstruktur der Spitex dank Einsatz von KI?</span>
+              </div>
+            </div>
             <div class="meta">
               <strong>Zuzana Schaffner</strong> &middot; Personal- &amp; Rechnungswesen<br/>
-              Biberist · 17. April 2026
+              Biberist · 29. Mai 2026
             </div>
             <button class="cta" data-go="problem">Analyse starten <span class="arr">→</span></button>
             <div class="hint" style="margin-top: 28px;">Entdecke in 7 interaktiven Schritten: Problem · Hebel · Lösung · Wirkung · Stimmen · Risiken · Fazit</div>
